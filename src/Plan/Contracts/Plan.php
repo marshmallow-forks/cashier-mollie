@@ -49,12 +49,12 @@ interface Plan
     public function setFirstPaymentAmount(Money $firstPaymentAmount);
 
     /**
-     * @return array
+     * @return string
      */
     public function firstPaymentMethod();
 
     /**
-     * @param array $firstPaymentMethod
+     * @param array|string $firstPaymentMethod
      * @return Plan
      */
     public function setFirstPaymentMethod($firstPaymentMethod);

@@ -158,11 +158,15 @@ class Plan implements PlanContract
     }
 
     /**
-     * @param  array $firstPaymentMethod
+     * @param  array|string  $firstPaymentMethod
      * @return $this
      */
     public function setFirstPaymentMethod($firstPaymentMethod)
     {
+        if (is_string($firstPaymentMethod)) {
+            $firstPaymentMethod = $this->castPaymentMethodString($firstPaymentMethod);
+        }
+
         $this->firstPaymentMethod = $firstPaymentMethod;
 
         return $this;

@@ -20,7 +20,6 @@ use Laravel\Cashier\Plan\Contracts\PlanRepository;
 use Laravel\Cashier\SubscriptionBuilder\FirstPaymentSubscriptionBuilder;
 use Laravel\Cashier\SubscriptionBuilder\MandatedSubscriptionBuilder;
 use Laravel\Cashier\Traits\PopulatesMollieCustomerFields;
-use Laravel\Cashier\UpdatePaymentMethod\UpdatePaymentMethodBuilder;
 use Mollie\Api\Exceptions\ApiException;
 use Mollie\Api\Resources\Customer;
 use Mollie\Api\Types\MandateMethod;
@@ -73,13 +72,12 @@ trait Billable
         if (! empty($this->mollie_mandate_id)) {
             $mandate = $this->mollieMandate();
             $planModel = app(PlanRepository::class)::findOrFail($plan);
-            $allowedPlanMethods = collect($planModel->firstPaymentMethod())->map(function ($allowedPlanMethod) {
-                return MandateMethod::getForFirstPaymentMethod($allowedPlanMethod);
-            })->filter()->unique();
+            $method = MandateMethod::getForFirstPaymentMethod($planModel->firstPaymentMethod());
+
             if (
                 ! empty($mandate)
                 && $mandate->isValid()
-                && $allowedPlanMethods->contains($mandate->method)
+                && $mandate->method === $method
             ) {
                 return $this->newSubscriptionForMandateId($this->mollie_mandate_id, $subscription, $plan);
             }
@@ -539,13 +537,5 @@ trait Billable
     public function redeemedCoupons()
     {
         return $this->morphMany(RedeemedCoupon::class, 'owner');
-    }
-
-    /**
-     * @return \Laravel\Cashier\UpdatePaymentMethod\UpdatePaymentMethodBuilder
-     */
-    public function updatePaymentMethod()
-    {
-        return new UpdatePaymentMethodBuilder($this);
     }
 }
