@@ -2,14 +2,14 @@
 
 namespace Laravel\Cashier\Tests\Coupon;
 
+use Laravel\Cashier\Subscription;
+use Laravel\Cashier\Order\OrderItem;
+use Laravel\Cashier\Tests\BaseTestCase;
 use Laravel\Cashier\Coupon\AppliedCoupon;
+use Laravel\Cashier\Coupon\RedeemedCoupon;
+use Laravel\Cashier\Order\OrderItemCollection;
 use Laravel\Cashier\Coupon\Contracts\CouponRepository;
 use Laravel\Cashier\Coupon\CouponOrderItemPreprocessor;
-use Laravel\Cashier\Coupon\RedeemedCoupon;
-use Laravel\Cashier\Order\OrderItem;
-use Laravel\Cashier\Order\OrderItemCollection;
-use Laravel\Cashier\Subscription;
-use Laravel\Cashier\Tests\BaseTestCase;
 
 class CouponOrderItemPreprocessorTest extends BaseTestCase
 {
@@ -33,6 +33,7 @@ class CouponOrderItemPreprocessorTest extends BaseTestCase
         $coupon = app()->make(CouponRepository::class)->findOrFail('test-coupon');
         $redeemedCoupon = $coupon->redeemFor($subscription);
         $preprocessor = new CouponOrderItemPreprocessor();
+
         $this->assertEquals(0, AppliedCoupon::count());
         $this->assertEquals(1, $redeemedCoupon->times_left);
 

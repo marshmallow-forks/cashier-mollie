@@ -28,7 +28,7 @@ composer require laravel/cashier-mollie "^1.0"
 
 Once you have pulled in the package:
 
-1. Run `php artisan cashier:install`. 
+1. Run `php artisan cashier:install`.
 
 2. Add these fields to your billable model's migration (typically the default "create_user_table" migration):
 
@@ -45,26 +45,26 @@ Once you have pulled in the package:
 4. Ensure you have properly configured the `MOLLIE_KEY` in your .env file. You can obtain an API key from the [Mollie dashboard](https://www.mollie.com/dashboard/developers/api-keys):
 
     ```dotenv
-   MOLLIE_KEY="test_xxxxxxxxxxxxxxxxxxxxxx"
+    MOLLIE_KEY="test_xxxxxxxxxxxxxxxxxxxxxx"
     ```
 
 5. Prepare the configuration files:
 
     - configure at least one subscription plan in `config/cashier_plans.php`.
-    
+
     - in `config/cashier_coupons.php` you can manage any coupons. By default an example coupon is enabled. Consider
-    disabling it before deploying to production. 
-    
+      disabling it before deploying to production.
+
     - the base configuration is in `config/cashier`. Be careful while modifying this, in most cases you will not need
-    to.
+      to.
 
 6. Prepare the billable model (typically the default Laravel User model):
-    
+
     - Add the `Laravel\Cashier\Billable` trait.
-    
+
     - Optionally, override the method `mollieCustomerFields()` to configure what billable model fields are stored while creating the Mollie Customer.
-    Out of the box the `mollieCustomerFields()` method uses the default Laravel User model fields:
-     
+      Out of the box the `mollieCustomerFields()` method uses the default Laravel User model fields:
+
     ```php
     public function mollieCustomerFields() {
         return [
@@ -73,44 +73,54 @@ Once you have pulled in the package:
         ];
     }
     ```
+
     Learn more about storing data on the Mollie Customer [here](https://docs.mollie.com/reference/v2/customers-api/create-customer#parameters).
-    
+
     - Implement `Laravel\Cashier\Order\Contracts\ProvidesInvoiceInformation` interface. For example:
-    
+
     ```php
-   /**
+    /**
     * Get the receiver information for the invoice.
     * Typically includes the name and some sort of (E-mail/physical) address.
     *
     * @return array An array of strings
     */
-   public function getInvoiceInformation()
-   {
+    public function getInvoiceInformation()
+    {
        return [$this->name, $this->email];
-   }
+    }
 
-   /**
+    /**
     * Get additional information to be displayed on the invoice. Typically a note provided by the customer.
     *
     * @return string|null
     */
-   public function getExtraBillingInformation()
-   {
+    public function getExtraBillingInformation()
+    {
        return null;
-   }
+    }
     ```
 
 7. Schedule a periodic job to execute `Cashier::run()`.
-   
+
     ```php
     $schedule->command('cashier:run')
         ->daily() // run as often as you like (Daily, monthly, every minute, ...)
         ->withoutOverlapping(); // make sure to include this
     ```
-   
+
 You can find more about scheduling jobs using Laravel [here](https://laravel.com/docs/scheduling).
 
 🎉 You're now good to go :).
+
+## Customization
+
+If you need to change the models that are used by this package, you are able to override them like so:
+
+```php
+Cashier::setOrderModel(OrderModelClass::class);
+Cashier::setOrderItemModel(OrderItemModelClass::class);
+```
 
 ## Usage
 
@@ -195,7 +205,7 @@ This will validate the coupon code and redeem it. The coupon will be applied to 
 Optionally, specify the subscription it should be applied to:
 
     $user->redeemCoupon('your-coupon-code', 'main');
-    
+
 By default all other active redeemed coupons for the subscription will be revoked. You can prevent this by setting the
 `$revokeOtherCoupons` flag to false:
 
@@ -240,7 +250,7 @@ if ($user->subscribedToPlan('monthly', 'main')) {
     //
 }
 ```
-    
+
 ### Cancelled Subscription Status
 
 To determine if the user was once an active subscriber, but has cancelled their subscription, you may use the `cancelled` method:
@@ -318,7 +328,7 @@ When changing the hard-coded value returned by the `taxPercentage` method, the t
 ```php
 $user->subscription('main')->syncTaxPercentage();
 ```
-    
+
 ### Subscription Anchor Date
 
 Not (yet) implemented, but you could make this work by scheduling `Cashier::run()` to only execute on a specific day of the month.
@@ -330,7 +340,9 @@ To cancel a subscription, call the `cancel` method on the user's subscription:
 ```php
 $user->subscription('main')->cancel();
 ```
+
 or
+
 ```php
 $user->subscription('main')->cancelAt(now());
 ```
@@ -373,7 +385,7 @@ $user->newSubscription('main', 'monthly')
 
 This method will set the trial period ending date on the subscription record within the database.
 
-> {note} The customer will be redirected to the Mollie checkout page to make the first payment in order to register a mandate. You can modify the amount in the cashier config file. 
+> {note} The customer will be redirected to the Mollie checkout page to make the first payment in order to register a mandate. You can modify the amount in the cashier config file.
 
 > {note} If the customer's subscription is not cancelled before the trial ending date they will be charged as soon as the trial expires, so you should be sure to notify your users of their trial ending date.
 
@@ -410,7 +422,7 @@ $user = User::create([
 ]);
 ```
 
-> {note}  Be sure to add a [date mutator](https://laravel.com/docs/eloquent-mutators#date-mutators) for `trial_ends_at` to your model definition.
+> {note} Be sure to add a [date mutator](https://laravel.com/docs/eloquent-mutators#date-mutators) for `trial_ends_at` to your model definition.
 
 Cashier refers to this type of trial as a "generic trial", since it is not attached to any existing subscription. The `onTrial` method on the `User` instance will return `true` if the current date is not past the value of `trial_ends_at`:
 
@@ -435,14 +447,15 @@ $user = User::find(1);
 
 $user->newSubscription('main', 'monthly')->create();
 ```
-    
+
 ### Defining Webhook Event Handlers
 
 Cashier automatically handles subscription cancellation on failed charges.
 
 Additionally, listen for the following events (in the `Laravel\Cashier\Events` namespace) to add app specific behaviour:
-- `OrderPaymentPaid` and `OrderPaymentFailed`
-- `FirstPaymentPaid` and `FirstPaymentFailed`
+
+-   `OrderPaymentPaid` and `OrderPaymentFailed`
+-   `FirstPaymentPaid` and `FirstPaymentFailed`
 
 ### One-off charges
 
@@ -452,7 +465,7 @@ Coming soon.
 
 Listen for the `OrderInvoiceAvailable` event (in the `Laravel\Cashier\Events` namespace).
 When a new order has been processed, you can grab the invoice by
-    
+
 ```php
 $invoice = $event->order->invoice();
 $invoice->view(); // get a Blade view
@@ -469,7 +482,7 @@ For list of invoices
 <ul class="list-unstyled">
     @foreach(auth()->user()->orders as $order)
     <li>
-        
+
         <a href="/download-invoice/{{ $order->id }}">
             {{ $order->invoice()->id() }} -  {{ $order->invoice()->date() }}
         </a>
@@ -477,6 +490,7 @@ For list of invoices
     @endforeach
 </ul>
 ```
+
 and add this route inside web.php
 
 ```php
@@ -488,7 +502,7 @@ Route::middleware('auth')->get('/download-invoice/{orderId}', function($orderId)
 
 ### Refunding Charges
 
-Coming soon. 
+Coming soon.
 
 ### Customer balance
 
@@ -500,7 +514,7 @@ The customer balance is automatically processed in each Order.
 A separate balance is kept for each currency.
 
 There are a few methods available to interact with the balance directly.
-__Use these with care:__
+**Use these with care:**
 
 ```php
 $credit = $user->credit('EUR');
@@ -529,7 +543,7 @@ class User extends Model
      * @example 'nl_NL'
      */
     public function getLocale() {
-        return $this->locale; 
+        return $this->locale;
     }
 }
 ```
@@ -539,58 +553,75 @@ class User extends Model
 You can listen for the following events from the Laravel\Cashier\Events namespace:
 
 #### `BalanceTurnedStale` event
+
 The user has a positive account balance, but no active subscriptions. Consider a refund.
 
 #### `CouponApplied` event
+
 A coupon was applied to an OrderItem. Note the distinction between _redeeming_ a coupon and _applying_ a coupon. A
 redeemed coupon can be applied to multiple orders. I.e. applying a 6 month discount on a monthly subscription using a
 single (redeemed) coupon.
 
 #### `FirstPaymentFailed` event
+
 The first payment (used for obtaining a mandate) has failed.
 
 #### `FirstPaymentPaid` event
+
 The first payment (used for obtaining a mandate) was successful.
 
 #### `MandateClearedFromBillable` event
+
 The `mollie_mandate_id` was cleared on the billable model. This happens when a payment has failed because of a invalid
 mandate.
 
 #### `MandateUpdated` event
+
 The billable model's mandate was updated. This usually means a new payment card was registered.
 
 #### `OrderCreated` event
+
 An Order was created.
 
 #### `OrderInvoiceAvailable` event
+
 An Invoice is available on the Order. Access it using `$event->order->invoice()`.
 
 #### `OrderPaymentFailed` event
+
 The payment for an order has failed.
 
 #### `OrderPaymentFailedDueToInvalidMandate` event
+
 The payment for an order has failed due to an invalid payment mandate. This happens for example when the customer's
 credit card has expired.
 
 #### `OrderPaymentPaid` event
-The payment for an order was successful. 
+
+The payment for an order was successful.
 
 #### `OrderProcessed` event
+
 The order has been fully processed.
 
 #### `SubscriptionStarted` event
+
 A new subscription was started.
 
 #### `SubscriptionCancelled` event
+
 The subscription was cancelled.
 
 #### `SubscriptionResumed` event
+
 The subscription was resumed.
 
 #### `SubscriptionPlanSwapped` event
+
 The subscription plan was swapped.
 
 #### `SubscriptionQuantityUpdated` event
+
 The subscription quantity was updated.
 
 ## Metered billing with variable amounts
@@ -608,17 +639,17 @@ You can define the preprocessors in the `cashier_plans` config file.
 ## Ok. So how does this all actually work?
 
 This Cashier implementation schedules triggering payments from the client side, instead of relying on subscription management at Mollie.
-(Yes, Mollie also offers a Subscription API, but it does not support all of Cashier features, so this package provides its own subscription engine.)  
+(Yes, Mollie also offers a Subscription API, but it does not support all of Cashier features, so this package provides its own subscription engine.)
 
 From a high level perspective, this is what the process looks like:
 
 1. A `Subscription` is created using the `MandatePaymentSubscriptionBuilder` (redirecting to Mollie's checkout to create
-a `Mandate`) or `PremandatedSubscriptionBuilder` (using an existing `Mandate`).
+   a `Mandate`) or `PremandatedSubscriptionBuilder` (using an existing `Mandate`).
 2. The `Subscription` yields a scheduled `OrderItem` at the beginning of each billing cycle.
 3. `OrderItems` which are due are preprocessed and bundled into `Orders` whenever possible by a scheduled job (i.e.
-daily). This is done so your customer will receive a single payment/invoice for multiple items later on in the chain).
-Preprocessing the `OrderItems` may involve applying dynamic discounts or metered billing, depending on your
-configuration.
+   daily). This is done so your customer will receive a single payment/invoice for multiple items later on in the chain).
+   Preprocessing the `OrderItems` may involve applying dynamic discounts or metered billing, depending on your
+   configuration.
 4. The `Order` is processed by the same scheduled job into a payment:
     - First, (if available) the customer's balance is processed in the `Order`.
     - If the total due is positive, a Mollie payment is incurred.
@@ -629,30 +660,31 @@ configuration.
 ## F.A.Q. - Frequently Asked Questions
 
 ### My billable model uses UUIDs, how can I get Cashier Mollie to work with this?
+
 By default Cashier Mollie uses `unsignedInteger` fields for the billable model relationships.
 If required for your billable model, modify the cashier migrations for UUIDs:
 
 ```php
 // Replace this:
 $table->unsignedInteger('owner_id');
-    
+
 // By this:
-$table->uuid('owner_id');  
+$table->uuid('owner_id');
 ```
 
 ### How is prorating handled?
 
 Cashier Mollie applies prorating by default. With prorating, customers are billed at the start of each billing cycle.
 
-This means that when the subscription quantity is updated or is switched to another plan: 
+This means that when the subscription quantity is updated or is switched to another plan:
 
 1. the billing cycle is reset
 2. the customer is credited for unused time, meaning that the amount that was overpaid is added to the customer's balance.
 3. a new billing cycle is started with the new subscription settings. An Order (and payment) is generated to deal with
-all of the previous, including applying the credited balance to the Order.
+   all of the previous, including applying the credited balance to the Order.
 
 This does not apply to the `$subscription->swapNextCycle('other-plan')`, which simply waits for the next billing cycle
-to update the subscription plan. A common use case for this is downgrading the plan at the end of the billing cycle. 
+to update the subscription plan. A common use case for this is downgrading the plan at the end of the billing cycle.
 
 ### How can I load coupons and/or plans from database?
 
@@ -718,7 +750,7 @@ class Plan extends Model
     public function buildCashierPlan(): CashierPlan
     {
         $plan = new CashierPlan($this->name);
-        
+
         return $plan->setAmount(mollie_array_to_money($this->amount))
             ->setInterval($this->interval)
             ->setDescription($this->description)
@@ -734,6 +766,7 @@ class Plan extends Model
 
 Note: In this case you'll need to add accessors for all the values (like amount, interval, fist_payment_method etc.)
 to make sure you'll use the values from your defaults (config/cashier_plans.php > defaults).
+
 </details>
 
 Then you just have to bind your implementation to the Laravel/Illuminate container by registering the binding in a service provider
@@ -764,30 +797,34 @@ You can obtain this key from the dashboard right after signing up.
 <env name="MOLLIE_KEY" value="YOUR_VALUE_HERE"/>
 ```
 
-**ID of a customer with a valid directdebit mandate** 
+**ID of a customer with a valid directdebit mandate**
+
 ```xml
 <env name="MANDATED_CUSTOMER_DIRECTDEBIT" value="YOUR_VALUE_HERE"/>
 ```
 
 **Mandate's ID (of the previously mentioned customer)**
+
 ```xml
 <env name="MANDATED_CUSTOMER_DIRECTDEBIT_MANDATE_ID" value="YOUR_VALUE_HERE"/>
 ```
 
 **ID of a successful ("paid) payment by the customer**
-Use a 1000 EUR amount. 
+Use a 1000 EUR amount.
+
 ```xml
 <env name="PAYMENT_PAID_ID" value="YOUR_VALUE_HERE"/>
 ```
 
 **ID of an unsuccessful ("failed") payment by the customer**
+
 ```xml
 <env name="PAYMENT_FAILED_ID" value="YOUR_VALUE_HERE"/>
 ```
 
 Now you can run:
 
-``` bash
+```bash
 composer test
 ```
 
@@ -801,9 +838,9 @@ If you discover any security related issues, please email support@mollie.com ins
 
 ## Credits
 
-- [Mollie.com](https://www.mollie.com)
-- [Sander van Hooft](https://github.com/sandervanhooft)
-- [All Contributors](../../contributors)
+-   [Mollie.com](https://www.mollie.com)
+-   [Sander van Hooft](https://github.com/sandervanhooft)
+-   [All Contributors](../../contributors)
 
 ## License
 

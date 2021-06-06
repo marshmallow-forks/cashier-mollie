@@ -83,4 +83,10 @@ return [
         'description' => 'Welcome to ' . config('app.name'),
     ],
 
+    'database' => [
+        'tables' => [
+            'order_items' => 'order_items',
+            'orders' => 'orders',
+        ],
+    ],
 ];

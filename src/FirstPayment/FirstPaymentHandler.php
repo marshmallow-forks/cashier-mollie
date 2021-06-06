@@ -2,13 +2,14 @@
 
 namespace Laravel\Cashier\FirstPayment;
 
+use Laravel\Cashier\Cashier;
+use Laravel\Cashier\Order\Order;
+use Mollie\Api\Resources\Payment;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Events\MandateUpdated;
-use Laravel\Cashier\FirstPayment\Actions\BaseAction;
-use Laravel\Cashier\Order\Order;
 use Laravel\Cashier\Order\OrderItemCollection;
-use Mollie\Api\Resources\Payment;
+use Laravel\Cashier\FirstPayment\Actions\BaseAction;
 
 class FirstPaymentHandler
 {
@@ -45,8 +46,9 @@ class FirstPaymentHandler
             $this->owner->save();
 
             $orderItems = $this->executeActions();
+            $orderModel = Cashier::$orderModel;
 
-            return Order::createProcessedFromItems($orderItems, [
+            return $orderModel::createProcessedFromItems($orderItems, [
                 'mollie_payment_id' => $this->payment->id,
                 'mollie_payment_status' => $this->payment->status,
             ]);

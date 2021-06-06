@@ -2,9 +2,9 @@
 
 namespace Laravel\Cashier\Coupon;
 
-use Laravel\Cashier\Order\BaseOrderItemPreprocessor;
 use Laravel\Cashier\Order\OrderItem;
 use Laravel\Cashier\Order\OrderItemCollection;
+use Laravel\Cashier\Order\BaseOrderItemPreprocessor;
 
 class CouponOrderItemPreprocessor extends BaseOrderItemPreprocessor
 {
@@ -15,7 +15,6 @@ class CouponOrderItemPreprocessor extends BaseOrderItemPreprocessor
     public function handle(OrderItemCollection $items)
     {
         $result = new OrderItemCollection;
-
         $items->each(function (OrderItem $item) use (&$result) {
             if ($item->orderableIsSet()) {
                 $coupons = $this->getActiveCoupons($item->orderable_type, $item->orderable_id);

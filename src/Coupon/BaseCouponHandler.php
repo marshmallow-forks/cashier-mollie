@@ -3,12 +3,13 @@
 namespace Laravel\Cashier\Coupon;
 
 use Illuminate\Support\Arr;
-use Laravel\Cashier\Coupon\Contracts\AcceptsCoupons;
-use Laravel\Cashier\Coupon\Contracts\CouponHandler;
-use Laravel\Cashier\Events\CouponApplied;
-use Laravel\Cashier\Exceptions\CouponException;
+use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Order\OrderItem;
+use Laravel\Cashier\Events\CouponApplied;
 use Laravel\Cashier\Order\OrderItemCollection;
+use Laravel\Cashier\Exceptions\CouponException;
+use Laravel\Cashier\Coupon\Contracts\CouponHandler;
+use Laravel\Cashier\Coupon\Contracts\AcceptsCoupons;
 
 abstract class BaseCouponHandler implements CouponHandler
 {
@@ -70,9 +71,9 @@ abstract class BaseCouponHandler implements CouponHandler
     public function validateOwnersFirstUse(Coupon $coupon, AcceptsCoupons $model)
     {
         $exists = RedeemedCoupon::whereName($coupon->name())
-                ->whereOwnerType($model->ownerType())
-                ->whereOwnerId($model->ownerId())
-                ->count() > 0;
+            ->whereOwnerType($model->ownerType())
+            ->whereOwnerId($model->ownerId())
+            ->count() > 0;
 
         throw_if($exists, new CouponException('You have already used this coupon.'));
     }
@@ -108,8 +109,8 @@ abstract class BaseCouponHandler implements CouponHandler
         if ($this->appliedCoupon) {
             return $this->appliedCoupon->orderItems()->make($data);
         }
-
-        return OrderItem::make($data);
+        $orderItemModel = Cashier::$orderItemModel;
+        return $orderItemModel::make($data);
     }
 
     /**

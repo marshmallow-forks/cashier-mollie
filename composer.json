@@ -1,6 +1,6 @@
 {
-    "name": "laravel/cashier-mollie",
-    "description": "Laravel Cashier provides an expressive, fluent interface to Mollie's subscription billing services.",
+    "name": "marshmallow/cashier-mollie",
+    "description": "This is a fork of the original Laravel Cashier package for Mollie.",
     "keywords": [
         "mollie",
         "laravel",
@@ -26,6 +26,12 @@
             "name": "Sander van Hooft",
             "email": "info@sandervanhooft.com",
             "homepage": "https://www.sandervanhooft.com",
+            "role": "Developer"
+        },
+        {
+            "name": "Stef van Esch",
+            "email": "stef@marshmallow.dev",
+            "homepage": "https://marshmallow.dev",
             "role": "Developer"
         }
     ],

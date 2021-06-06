@@ -3,6 +3,7 @@
 namespace Laravel\Cashier\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Order\Order;
 use Mollie\Api\Resources\Payment;
 use Mollie\Api\Types\PaymentStatus;
@@ -47,10 +48,11 @@ class WebhookController extends BaseWebhookController
      */
     protected function getOrder(Payment $payment)
     {
-        $order = Order::findByPaymentId($payment->id);
+        $orderModel = Cashier::$orderModel;
+        $order = $orderModel::findByPaymentId($payment->id);
 
-        if (! $order && isset($payment->metadata, $payment->metadata->temporary_mollie_payment_id)) {
-            $order = Order::findByPaymentId($payment->metadata->temporary_mollie_payment_id);
+        if (!$order && isset($payment->metadata, $payment->metadata->temporary_mollie_payment_id)) {
+            $order = $orderModel::findByPaymentId($payment->metadata->temporary_mollie_payment_id);
 
             if ($order) {
                 // Store the definite payment id.

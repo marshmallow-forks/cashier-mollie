@@ -2,13 +2,15 @@
 
 namespace Laravel\Cashier;
 
+use Error;
 use Exception;
-use Illuminate\Database\Eloquent\Model;
-use Laravel\Cashier\Order\Order;
-use Laravel\Cashier\Order\OrderItem;
-use Money\Currencies\ISOCurrencies;
-use Money\Formatter\IntlMoneyFormatter;
 use Money\Money;
+use Illuminate\Support\Str;
+use Laravel\Cashier\Order\Order;
+use Money\Currencies\ISOCurrencies;
+use Laravel\Cashier\Order\OrderItem;
+use Illuminate\Database\Eloquent\Model;
+use Money\Formatter\IntlMoneyFormatter;
 
 class Cashier
 {
@@ -55,16 +57,32 @@ class Cashier
     public static $registersRoutes = true;
 
     /**
+     * The order model class name.
+     *
+     * @var string
+     */
+    public static $orderModel = Order::class;
+
+    /**
+     * The order model class name.
+     *
+     * @var string
+     */
+    public static $orderItemModel = OrderItem::class;
+
+    /**
      * Process scheduled OrderItems
      *
      * @return \Illuminate\Support\Collection
      */
     public static function run()
     {
-        $items = OrderItem::shouldProcess()->get();
+        $orderItem = self::$orderItemModel;
+        $items = $orderItem::shouldProcess()->get();
 
         $orders = $items->chunkByOwnerAndCurrency()->map(function ($chunk) {
-            return Order::createFromItems($chunk)->processPayment();
+            $orderModel = self::$orderModel;
+            return $orderModel::createFromItems($chunk)->processPayment();
         });
 
         return $orders;
@@ -198,7 +216,7 @@ class Cashier
         if (method_exists($owner, 'getLocale')) {
             $locale = $owner->getLocale();
 
-            if (! empty($locale)) {
+            if (!empty($locale)) {
                 return $locale;
             }
         }
@@ -261,5 +279,28 @@ class Cashier
         $url_parts = parse_url($url);
 
         return preg_replace('/^\//', '', $url_parts['path']);
+    }
+
+    public static function setOrderModel2($test)
+    {
+        self::$orderModel = $test;
+    }
+
+    public static function __callStatic($name, $arguments)
+    {
+        /**
+         * This will make it possible to overwride the model classes that are provided
+         * in the Cachier class. With this functionality it will be possible to set
+         * self::$orderModel by calling Cashier::setOrderModel(Path\To\Class:class);
+         */
+        if (Str::startsWith($name, 'set')) {
+            $possible_model_name = (string) Str::of($name)->replace('set', '')->camel();
+            if (isset(self::$$possible_model_name)) {
+                self::$$possible_model_name = $arguments[0];
+                return true;
+            }
+        }
+        $class = get_called_class();
+        throw new Error("Call to undefined method {$class}::{$name}()", 1);
     }
 }

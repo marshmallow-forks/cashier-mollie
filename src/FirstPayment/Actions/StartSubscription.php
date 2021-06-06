@@ -3,14 +3,14 @@
 namespace Laravel\Cashier\FirstPayment\Actions;
 
 use Carbon\Carbon;
+use Laravel\Cashier\Cashier;
 use Illuminate\Database\Eloquent\Model;
-use Laravel\Cashier\Coupon\Contracts\CouponRepository;
 use Laravel\Cashier\Coupon\RedeemedCoupon;
-use Laravel\Cashier\Order\OrderItem;
 use Laravel\Cashier\Order\OrderItemCollection;
 use Laravel\Cashier\Plan\Contracts\PlanRepository;
-use Laravel\Cashier\SubscriptionBuilder\Contracts\SubscriptionConfigurator;
+use Laravel\Cashier\Coupon\Contracts\CouponRepository;
 use Laravel\Cashier\SubscriptionBuilder\MandatedSubscriptionBuilder;
+use Laravel\Cashier\SubscriptionBuilder\Contracts\SubscriptionConfigurator;
 
 class StartSubscription extends BaseAction implements SubscriptionConfigurator
 {
@@ -119,13 +119,13 @@ class StartSubscription extends BaseAction implements SubscriptionConfigurator
             'taxPercentage' => $this->getTaxPercentage(),
             'plan' => $this->plan->name(),
             'name' => $this->name,
-            'trialExpires' => ! empty($this->trialExpires) ? $this->trialExpires->toIso8601String() : null,
-            'quantity' => ! empty($this->quantity) ? $this->quantity : null,
-            'nextPaymentAt' => ! empty($this->nextPaymentAt) ? $this->nextPaymentAt->toIso8601String() : null,
+            'trialExpires' => !empty($this->trialExpires) ? $this->trialExpires->toIso8601String() : null,
+            'quantity' => !empty($this->quantity) ? $this->quantity : null,
+            'nextPaymentAt' => !empty($this->nextPaymentAt) ? $this->nextPaymentAt->toIso8601String() : null,
             'trialDays' => $this->trialDays,
-            'trialUntil' => ! empty($this->trialUntil) ? $this->trialUntil->toIso8601String(): null,
+            'trialUntil' => !empty($this->trialUntil) ? $this->trialUntil->toIso8601String() : null,
             'skipTrial' => $this->skipTrial,
-            'coupon' => ! empty($this->coupon) ? $this->coupon->name() : null,
+            'coupon' => !empty($this->coupon) ? $this->coupon->name() : null,
         ]);
     }
 
@@ -136,7 +136,8 @@ class StartSubscription extends BaseAction implements SubscriptionConfigurator
      */
     public function makeProcessedOrderItems()
     {
-        return OrderItem::make($this->processedOrderItemData())->toCollection();
+        $orderItemModel = Cashier::$orderItemModel;
+        return $orderItemModel::make($this->processedOrderItemData())->toCollection();
     }
 
     /**
@@ -166,7 +167,7 @@ class StartSubscription extends BaseAction implements SubscriptionConfigurator
      */
     public function execute()
     {
-        if (empty($this->nextPaymentAt) && ! $this->isTrial()) {
+        if (empty($this->nextPaymentAt) && !$this->isTrial()) {
             $this->builder()->nextPaymentAt(Carbon::parse($this->plan->interval()));
         }
 
@@ -182,7 +183,7 @@ class StartSubscription extends BaseAction implements SubscriptionConfigurator
         if ($this->coupon) {
             $redeemedCoupon = RedeemedCoupon::record($this->coupon, $subscription);
 
-            if (! $this->isTrial()) {
+            if (!$this->isTrial()) {
                 $processedItems = $this->coupon->applyTo($redeemedCoupon, $processedItems);
             }
         }
@@ -295,7 +296,7 @@ class StartSubscription extends BaseAction implements SubscriptionConfigurator
      */
     protected function isTrial()
     {
-        return ! (empty($this->trialDays) && empty($this->trialUntil));
+        return !(empty($this->trialDays) && empty($this->trialUntil));
     }
 
     /**
