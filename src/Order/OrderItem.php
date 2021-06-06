@@ -2,12 +2,13 @@
 
 namespace Laravel\Cashier\Order;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Query\Builder;
-use Laravel\Cashier\Order\Contracts\InteractsWithOrderItems;
-use Laravel\Cashier\Order\Contracts\InvoicableItem;
-use Laravel\Cashier\Traits\FormatsAmount;
+use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Traits\HasOwner;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Cashier\Traits\FormatsAmount;
+use Laravel\Cashier\Order\Contracts\InvoicableItem;
+use Laravel\Cashier\Order\Contracts\InteractsWithOrderItems;
 
 /**
  * @property InteractsWithOrderItems orderable
@@ -64,7 +65,7 @@ class OrderItem extends Model implements InvoicableItem
      */
     public function order()
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Cashier::$orderModel);
     }
 
     /**
@@ -110,7 +111,7 @@ class OrderItem extends Model implements InvoicableItem
      */
     public function scopeProcessed($query, $processed = true)
     {
-        if (! $processed) {
+        if (!$processed) {
             return $query->whereNull('order_id');
         }
 
@@ -126,7 +127,7 @@ class OrderItem extends Model implements InvoicableItem
      */
     public function scopeUnprocessed($query, $unprocessed = true)
     {
-        return $query->processed(! $unprocessed);
+        return $query->processed(!$unprocessed);
     }
 
     /**
@@ -169,7 +170,7 @@ class OrderItem extends Model implements InvoicableItem
      */
     public function toCollection()
     {
-        return $this->newCollection([ $this ]);
+        return $this->newCollection([$this]);
     }
 
     /**

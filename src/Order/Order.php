@@ -2,26 +2,27 @@
 
 namespace Laravel\Cashier\Order;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
+use LogicException;
 use Illuminate\Support\Str;
+use Laravel\Cashier\Cashier;
+use Mollie\Api\Resources\Mandate;
+use Illuminate\Support\Facades\DB;
 use Laravel\Cashier\Credit\Credit;
-use Laravel\Cashier\Events\BalanceTurnedStale;
+use Mollie\Api\Types\PaymentStatus;
+use Laravel\Cashier\Traits\HasOwner;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Laravel\Cashier\Events\OrderCreated;
-use Laravel\Cashier\Events\OrderPaymentFailed;
-use Laravel\Cashier\Events\OrderPaymentFailedDueToInvalidMandate;
-use Laravel\Cashier\Events\OrderPaymentPaid;
 use Laravel\Cashier\Events\OrderProcessed;
+use Laravel\Cashier\Events\OrderPaymentPaid;
+use Laravel\Cashier\Events\BalanceTurnedStale;
+use Laravel\Cashier\Events\OrderPaymentFailed;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Cashier\Order\Contracts\MinimumPayment;
 use Laravel\Cashier\Exceptions\InvalidMandateException;
 use Laravel\Cashier\MandatedPayment\MandatedPaymentBuilder;
-use Laravel\Cashier\Order\Contracts\MinimumPayment;
-use Laravel\Cashier\Traits\HasOwner;
-use LogicException;
-use Mollie\Api\Resources\Mandate;
-use Mollie\Api\Types\PaymentStatus;
+use Laravel\Cashier\Events\OrderPaymentFailedDueToInvalidMandate;
 
 /**
  * @method static create(array $data)
@@ -146,7 +147,7 @@ class Order extends Model
      */
     public function processPayment()
     {
-        $this->update(['mollie_payment_id' => 'temp_'.Str::uuid()]);
+        $this->update(['mollie_payment_id' => 'temp_' . Str::uuid()]);
 
         DB::transaction(function () {
             $owner = $this->owner;
@@ -181,9 +182,9 @@ class Order extends Model
                     $this->mollie_payment_id = null;
 
                     // Add credit to the owner's balance
-                    $credit = Credit::addAmountForOwner($owner, money(-($this->total_due), $this->currency));
+                    $credit = Credit::addAmountForOwner($owner, money(- ($this->total_due), $this->currency));
 
-                    if (! $owner->hasActiveSubscriptionWithCurrency($this->currency)) {
+                    if (!$owner->hasActiveSubscriptionWithCurrency($this->currency)) {
                         Event::dispatch(new BalanceTurnedStale($credit));
                     }
 
@@ -229,7 +230,7 @@ class Order extends Model
      */
     public function items()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(Cashier::$orderItemModel);
     }
 
     /**
@@ -269,10 +270,10 @@ class Order extends Model
         if (method_exists($owner, 'getExtraBillingInformation')) {
             $extra_information = $owner->getExtraBillingInformation();
 
-            if (! empty($extra_information)) {
+            if (!empty($extra_information)) {
                 $extra_information = explode("\n", $extra_information);
 
-                if (is_array($extra_information) && ! empty($extra_information)) {
+                if (is_array($extra_information) && !empty($extra_information)) {
                     $invoice->setExtraInformation($extra_information);
                 }
             }
@@ -288,7 +289,7 @@ class Order extends Model
      */
     public function isProcessed()
     {
-        return ! empty($this->processed_at);
+        return !empty($this->processed_at);
     }
 
     /**
@@ -316,7 +317,7 @@ class Order extends Model
      */
     public function scopeUnprocessed($query, $unprocessed = true)
     {
-        return $query->processed(! $unprocessed);
+        return $query->processed(!$unprocessed);
     }
 
     /**
@@ -534,8 +535,8 @@ class Order extends Model
      */
     protected function guardMandate(?Mandate $mandate)
     {
-        if (empty($mandate) || ! $mandate->isValid()) {
-            throw new InvalidMandateException('Cannot process payment without valid mandate for order id '.$this->id);
+        if (empty($mandate) || !$mandate->isValid()) {
+            throw new InvalidMandateException('Cannot process payment without valid mandate for order id ' . $this->id);
         }
     }
 

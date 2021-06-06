@@ -2,29 +2,30 @@
 
 namespace Laravel\Cashier;
 
+use Money\Money;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
+use LogicException;
+use Laravel\Cashier\Cashier;
+use Laravel\Cashier\Order\Order;
 use Illuminate\Support\Facades\DB;
+use Laravel\Cashier\Order\OrderItem;
+use Laravel\Cashier\Traits\HasOwner;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Database\Eloquent\Model;
+use Laravel\Cashier\Plan\Contracts\Plan;
 use Laravel\Cashier\Coupon\AppliedCoupon;
-use Laravel\Cashier\Coupon\Contracts\AcceptsCoupons;
 use Laravel\Cashier\Coupon\RedeemedCoupon;
-use Laravel\Cashier\Events\SubscriptionCancelled;
-use Laravel\Cashier\Events\SubscriptionPlanSwapped;
-use Laravel\Cashier\Events\SubscriptionQuantityUpdated;
+use Laravel\Cashier\Order\OrderItemCollection;
 use Laravel\Cashier\Events\SubscriptionResumed;
 use Laravel\Cashier\Events\SubscriptionStarted;
-use Laravel\Cashier\Order\Contracts\InteractsWithOrderItems;
-use Laravel\Cashier\Order\Contracts\PreprocessesOrderItems;
-use Laravel\Cashier\Order\Order;
-use Laravel\Cashier\Order\OrderItem;
-use Laravel\Cashier\Order\OrderItemCollection;
-use Laravel\Cashier\Plan\Contracts\Plan;
+use Laravel\Cashier\Events\SubscriptionCancelled;
 use Laravel\Cashier\Plan\Contracts\PlanRepository;
-use Laravel\Cashier\Traits\HasOwner;
+use Laravel\Cashier\Events\SubscriptionPlanSwapped;
+use Laravel\Cashier\Coupon\Contracts\AcceptsCoupons;
+use Laravel\Cashier\Events\SubscriptionQuantityUpdated;
 use Laravel\Cashier\Types\SubscriptionCancellationReason;
-use LogicException;
-use Money\Money;
+use Laravel\Cashier\Order\Contracts\PreprocessesOrderItems;
+use Laravel\Cashier\Order\Contracts\InteractsWithOrderItems;
 
 /**
  * @property int id
@@ -102,7 +103,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function ended()
     {
-        return $this->cancelled() && ! $this->onGracePeriod();
+        return $this->cancelled() && !$this->onGracePeriod();
     }
 
     /**
@@ -132,7 +133,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function recurring()
     {
-        return ! $this->onTrial() && ! $this->cancelled();
+        return !$this->onTrial() && !$this->cancelled();
     }
 
     /**
@@ -142,7 +143,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function cancelled()
     {
-        return ! is_null($this->ends_at);
+        return !is_null($this->ends_at);
     }
 
     /**
@@ -337,11 +338,11 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function resume()
     {
-        if (! $this->cancelled()) {
+        if (!$this->cancelled()) {
             throw new LogicException('Unable to resume a subscription that is not cancelled.');
         }
 
-        if (! $this->onGracePeriod()) {
+        if (!$this->onGracePeriod()) {
             throw new LogicException('Unable to resume a subscription that is not within grace period.');
         }
 
@@ -367,7 +368,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function orderItems()
     {
-        return $this->morphMany(OrderItem::class, 'orderable');
+        return $this->morphMany(Cashier::$orderItemModel, 'orderable');
     }
 
     /**
@@ -377,7 +378,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
      */
     public function scheduledOrderItem()
     {
-        return $this->hasOne(OrderItem::class, 'id', 'scheduled_order_item_id');
+        return $this->hasOne(Cashier::$orderItemModel, 'id', 'scheduled_order_item_id');
     }
 
     /**
@@ -460,7 +461,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
         $plan_swapped = false;
         $previousPlan = null;
 
-        if (! empty($subscription->next_plan)) {
+        if (!empty($subscription->next_plan)) {
             $plan_swapped = true;
             $previousPlan = $subscription->plan;
             $subscription->plan = $subscription->next_plan;
@@ -676,7 +677,7 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
         $plan = $this->plan();
         $amount = $plan->amount()->negative()->multiply($this->getCycleLeftAttribute($now));
 
-        return $this->reimburse($amount, [ 'description' => $plan->description() ]);
+        return $this->reimburse($amount, ['description' => $plan->description()]);
     }
 
     /**
@@ -719,7 +720,8 @@ class Subscription extends Model implements InteractsWithOrderItems, Preprocesse
             $this->save();
 
             if ($invoiceNow) {
-                $order = Order::createFromItems($orderItems);
+                $orderModel = Cashier::$orderModel;
+                $order = $orderModel::createFromItems($orderItems);
                 $order->processPayment();
             }
 

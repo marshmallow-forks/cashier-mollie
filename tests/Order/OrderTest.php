@@ -3,28 +3,31 @@
 namespace Laravel\Cashier\Tests\Order;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Event;
-use Laravel\Cashier\Events\BalanceTurnedStale;
-use Laravel\Cashier\Events\OrderCreated;
-use Laravel\Cashier\Events\OrderPaymentFailedDueToInvalidMandate;
-use Laravel\Cashier\Events\OrderProcessed;
-use Laravel\Cashier\Mollie\Contracts\CreateMolliePayment;
-use Laravel\Cashier\Mollie\Contracts\GetMollieCustomer;
-use Laravel\Cashier\Mollie\Contracts\GetMollieMandate;
-use Laravel\Cashier\Mollie\Contracts\GetMollieMethodMinimumAmount;
-use Laravel\Cashier\Order\Invoice;
-use Laravel\Cashier\Order\Order;
-use Laravel\Cashier\Order\OrderCollection;
-use Laravel\Cashier\Order\OrderItem;
-use Laravel\Cashier\Order\OrderItemCollection;
-use Laravel\Cashier\Subscription;
-use Laravel\Cashier\Tests\BaseTestCase;
-use Laravel\Cashier\Tests\Fixtures\User;
+use Laravel\Cashier\Cashier;
 use Mollie\Api\MollieApiClient;
-use Mollie\Api\Resources\Customer;
+use Laravel\Cashier\Order\Order;
+use Laravel\Cashier\Subscription;
 use Mollie\Api\Resources\Mandate;
 use Mollie\Api\Resources\Payment;
+use Laravel\Cashier\Order\Invoice;
+use Mollie\Api\Resources\Customer;
 use Mollie\Api\Types\PaymentStatus;
+use Laravel\Cashier\Order\OrderItem;
+use Illuminate\Support\Facades\Event;
+use Laravel\Cashier\Tests\BaseTestCase;
+use Laravel\Cashier\Events\OrderCreated;
+use Laravel\Cashier\Tests\Fixtures\User;
+use Laravel\Cashier\Events\OrderProcessed;
+use Laravel\Cashier\Order\OrderCollection;
+use Laravel\Cashier\Events\BalanceTurnedStale;
+use Laravel\Cashier\Order\OrderItemCollection;
+use Laravel\Cashier\Tests\Order\FakeOrderModelClass;
+use Laravel\Cashier\Mollie\Contracts\GetMollieMandate;
+use Laravel\Cashier\Mollie\Contracts\GetMollieCustomer;
+use Laravel\Cashier\Tests\Order\FakeOrderItemModelClass;
+use Laravel\Cashier\Mollie\Contracts\CreateMolliePayment;
+use Laravel\Cashier\Events\OrderPaymentFailedDueToInvalidMandate;
+use Laravel\Cashier\Mollie\Contracts\GetMollieMethodMinimumAmount;
 
 class OrderTest extends BaseTestCase
 {
@@ -293,6 +296,55 @@ class OrderTest extends BaseTestCase
         $this->assertFalse($user->hasCredit('EUR'));
 
         $this->assertDispatchedOrderProcessed($order);
+    }
+
+    /** @test */
+    public function orderModelClassCanBeOverwritten()
+    {
+        Event::fake();
+
+        $user = $this->getMandatedUser(true);
+        $order = $user->orders()->save(factory(Order::class)->make([
+            'total' => 0,
+            'total_due' => 0,
+            'currency' => 'EUR',
+        ]));
+
+        $this->assertInstanceOf(\Laravel\Cashier\Order\Order::class, $order);
+
+        Cashier::setOrderModel(FakeOrderModelClass::class);
+        $order = $user->fresh()->orders->first();
+
+        $this->assertInstanceOf(FakeOrderModelClass::class, $order);
+    }
+
+    /** @test */
+    public function orderItemModelClassCanBeOverwritten()
+    {
+        Carbon::setTestNow(Carbon::parse('2018-01-01'));
+        Event::fake();
+        $user = factory(User::class)->create(); // user without subscription/mandate
+
+        factory(OrderItem::class, 2)->create([
+            'orderable_type' => null,
+            'orderable_id' => null,
+            'process_at' => now()->subMinute(), // sub minute so we're sure it's ready to be processed
+            'owner_id' => $user->id,
+            'owner_type' => get_class($user),
+            'currency' => 'EUR',
+            'quantity' => 1,
+            'unit_price' => -12345, // includes vat
+            'tax_percentage' => 21.5,
+        ]);
+
+        $order = Order::createFromItems(OrderItem::all());
+        $order_id = $order->id;
+
+        $this->assertInstanceOf(\Laravel\Cashier\Order\OrderItem::class, $order->items->first());
+
+        Cashier::setOrderItemModel(FakeOrderItemModelClass::class);
+
+        $this->assertInstanceOf(FakeOrderItemModelClass::class, Order::find($order_id)->items->first());
     }
 
     /** @test */
@@ -737,14 +789,14 @@ class OrderTest extends BaseTestCase
 
         $invoice = $order->invoice('2019-0000-0001', Carbon::parse('2019-05-06'));
 
-        $filename = __DIR__.'/../../example_invoice_output.html';
+        $filename = __DIR__ . '/../../example_invoice_output.html';
         $some_content = 'Invoice dummy';
 
         if (collect($this->getGroups())->contains('generate_new_invoice_template')) {
             $this->assertFileIsWritable($filename);
 
             if (is_writable($filename)) {
-                if (! $handle = fopen($filename, 'w')) {
+                if (!$handle = fopen($filename, 'w')) {
                     echo "Cannot open file ($filename)";
                     exit;
                 }

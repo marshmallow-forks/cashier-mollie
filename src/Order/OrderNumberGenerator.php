@@ -2,6 +2,8 @@
 
 namespace Laravel\Cashier\Order;
 
+use Laravel\Cashier\Cashier;
+
 class OrderNumberGenerator
 {
     protected $offset;
@@ -21,8 +23,9 @@ class OrderNumberGenerator
      */
     public function generate()
     {
+        $orderModel = Cashier::$orderModel;
         $number = str_pad(
-            $this->offset + Order::count() + 1,
+            $this->offset + $orderModel::count() + 1,
             8,
             '0',
             STR_PAD_LEFT

@@ -2,28 +2,27 @@
 
 namespace Laravel\Cashier;
 
+use Money\Money;
 use Dompdf\Options;
-use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
-use Laravel\Cashier\Coupon\Contracts\CouponRepository;
-use Laravel\Cashier\Coupon\RedeemedCoupon;
-use Laravel\Cashier\Credit\Credit;
-use Laravel\Cashier\Events\MandateClearedFromBillable;
-use Laravel\Cashier\Exceptions\InvalidMandateException;
-use Laravel\Cashier\Mollie\Contracts\CreateMollieCustomer;
-use Laravel\Cashier\Mollie\Contracts\GetMollieCustomer;
-use Laravel\Cashier\Mollie\Contracts\GetMollieMandate;
-use Laravel\Cashier\Order\Invoice;
 use Laravel\Cashier\Order\Order;
-use Laravel\Cashier\Order\OrderItem;
-use Laravel\Cashier\Plan\Contracts\PlanRepository;
-use Laravel\Cashier\SubscriptionBuilder\FirstPaymentSubscriptionBuilder;
-use Laravel\Cashier\SubscriptionBuilder\MandatedSubscriptionBuilder;
-use Laravel\Cashier\Traits\PopulatesMollieCustomerFields;
-use Mollie\Api\Exceptions\ApiException;
+use Illuminate\Support\Facades\DB;
+use Laravel\Cashier\Credit\Credit;
+use Laravel\Cashier\Order\Invoice;
 use Mollie\Api\Resources\Customer;
 use Mollie\Api\Types\MandateMethod;
-use Money\Money;
+use Mollie\Api\Exceptions\ApiException;
+use Laravel\Cashier\Coupon\RedeemedCoupon;
+use Laravel\Cashier\Plan\Contracts\PlanRepository;
+use Laravel\Cashier\Coupon\Contracts\CouponRepository;
+use Laravel\Cashier\Events\MandateClearedFromBillable;
+use Laravel\Cashier\Mollie\Contracts\GetMollieMandate;
+use Laravel\Cashier\Exceptions\InvalidMandateException;
+use Laravel\Cashier\Mollie\Contracts\GetMollieCustomer;
+use Laravel\Cashier\Traits\PopulatesMollieCustomerFields;
+use Laravel\Cashier\Mollie\Contracts\CreateMollieCustomer;
+use Laravel\Cashier\SubscriptionBuilder\MandatedSubscriptionBuilder;
+use Laravel\Cashier\SubscriptionBuilder\FirstPaymentSubscriptionBuilder;
 
 trait Billable
 {
@@ -50,9 +49,9 @@ trait Billable
         return $this->subscriptions->sortByDesc(function ($value) {
             return $value->created_at->getTimestamp();
         })
-        ->first(function ($value) use ($subscription) {
-            return $value->name === $subscription;
-        });
+            ->first(function ($value) use ($subscription) {
+                return $value->name === $subscription;
+            });
     }
 
     /**
@@ -69,13 +68,13 @@ trait Billable
      */
     public function newSubscription($subscription, $plan, $firstPaymentOptions = [])
     {
-        if (! empty($this->mollie_mandate_id)) {
+        if (!empty($this->mollie_mandate_id)) {
             $mandate = $this->mollieMandate();
             $planModel = app(PlanRepository::class)::findOrFail($plan);
             $method = MandateMethod::getForFirstPaymentMethod($planModel->firstPaymentMethod());
 
             if (
-                ! empty($mandate)
+                !empty($mandate)
                 && $mandate->isValid()
                 && $mandate->method === $method
             ) {
@@ -239,7 +238,7 @@ trait Billable
         }
 
         return $subscription->valid() &&
-               $subscription->plan === $plan;
+            $subscription->plan === $plan;
     }
 
     /**
@@ -250,7 +249,7 @@ trait Billable
     public function subscribedToPlan($plans, $subscription = 'default')
     {
         $subscription = $this->subscription($subscription);
-        if (! $subscription || ! $subscription->valid()) {
+        if (!$subscription || !$subscription->valid()) {
             return false;
         }
         foreach ((array) $plans as $plan) {
@@ -276,7 +275,7 @@ trait Billable
      */
     public function orders()
     {
-        return $this->morphMany(Order::class, 'owner');
+        return $this->morphMany(Cashier::$orderModel, 'owner');
     }
 
     /**
@@ -286,7 +285,7 @@ trait Billable
      */
     public function orderItems()
     {
-        return $this->morphMany(OrderItem::class, 'owner');
+        return $this->morphMany(Cashier::$orderItemModel, 'owner');
     }
 
     /**
@@ -329,7 +328,7 @@ trait Billable
     {
         $credit = $this->credits()->whereCurrency($currency)->first();
 
-        if (! $credit) {
+        if (!$credit) {
             $credit = $this->credits()->create([
                 'currency' => $currency,
                 'value' => 0,
@@ -419,7 +418,7 @@ trait Billable
     {
         $mandateId = $this->mollieMandateId();
 
-        if (! empty($mandateId)) {
+        if (!empty($mandateId)) {
             $customer = $this->asMollieCustomer();
 
             try {
@@ -429,7 +428,7 @@ trait Billable
                 return $getMollieMandate->execute($customer->id, $mandateId);
             } catch (ApiException $e) {
                 // Status 410: mandate was revoked
-                if (! $e->getCode() == 410) {
+                if (!$e->getCode() == 410) {
                     throw $e;
                 }
             }
@@ -509,7 +508,7 @@ trait Billable
     {
         $subscription = $this->subscription($subscription);
 
-        if (! $subscription) {
+        if (!$subscription) {
             throw new InvalidArgumentException('Unable to apply coupon. Subscription does not exist.');
         }
 

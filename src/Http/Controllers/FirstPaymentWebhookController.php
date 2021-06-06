@@ -3,13 +3,14 @@
 namespace Laravel\Cashier\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
-use Laravel\Cashier\Events\FirstPaymentFailed;
-use Laravel\Cashier\Events\FirstPaymentPaid;
-use Laravel\Cashier\FirstPayment\FirstPaymentHandler;
+use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Order\Order;
 use Mollie\Api\Types\PaymentStatus;
+use Illuminate\Support\Facades\Event;
+use Laravel\Cashier\Events\FirstPaymentPaid;
+use Laravel\Cashier\Events\FirstPaymentFailed;
 use Symfony\Component\HttpFoundation\Response;
+use Laravel\Cashier\FirstPayment\FirstPaymentHandler;
 
 class FirstPaymentWebhookController extends BaseWebhookController
 {
@@ -23,7 +24,8 @@ class FirstPaymentWebhookController extends BaseWebhookController
         $paymentId = $request->get('id');
 
         // If a paid order already exists this webhook call is for a refund or chargeback
-        $existingOrder = Order::findByPaymentId($paymentId);
+        $orderModel = Cashier::$orderModel;
+        $existingOrder = $orderModel::findByPaymentId($paymentId);
         if ($existingOrder && $existingOrder->mollie_payment_status === PaymentStatus::STATUS_PAID) {
 
             // Do nothing. Refunds and chargebacks are not supported in cashier-mollie v1
